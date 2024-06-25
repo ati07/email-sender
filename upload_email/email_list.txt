@@ -1,0 +1,26 @@
+atiurrahman.ansari@gmail.com,this is test this is test this is test,email_template_1.html
+atiurrahman.sathi@gmail.com,this is test,email_template.html
+GiaKobis@gmail.com,this is test,email_template.html
+ZackRolson@gmail.com,this is test,email_template.html
+CammyShone@gmail.com,this is test,email_template.html
+AliseZamora@gmail.com,this is test,email_template.html
+SimonDejean@gmail.com,this is test,email_template.html
+GrahamNiblock@gmail.com,this is test,email_template.html
+StaceyTadlock@gmail.com,this is test,email_template.html
+AngelikaQuach@gmail.com,this is test,email_template.html
+TheodoreSabo@gmail.com,this is test,email_template.html
+CathyFranco@gmail.com,this is test,email_template.html
+JameyAndrew@gmail.com,this is test,email_template.html
+PeteBelcastro@gmail.com,this is test,email_template.html
+DaniaValentini@gmail.com,this is test,email_template.html
+AshlyHoneycutt@gmail.com,this is test,email_template.html
+YukBaba@gmail.com,this is test,email_template.html
+JulieDrier@gmail.com,this is test,email_template.html
+BlairBurgess@gmail.com,this is test,email_template.html
+AndreMordhorst@gmail.com,this is test,email_template.html
+GabrielleChun@gmail.com,this is test,email_template.html
+JuliaAlltop@gmail.com,this is test,email_template.html
+HowardBarcus@gmail.com,this is test,email_template.html
+MerryEwin@gmail.com,this is test,email_template.html
+JanuaryCathy@gmail.com,this is test,email_template.html
+BenGomm@gmail.com,this is test,email_template.html
