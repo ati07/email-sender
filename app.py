@@ -13,10 +13,13 @@ from threading import Lock
 import time
 import random
 from flask import Flask, request, jsonify, render_template
-from flask_socketio import SocketIO, emit
+from flask_cors import CORS
+
+# from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+CORS(app)  # Add this line to enable CORS for all routes
+# socketio = SocketIO(app)
 
 # SCOPES for Gmail API
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
@@ -105,12 +108,12 @@ def send_email_with_credential(credentials_filename, recipient, subject, body_ht
             email_count[credentials_filename] += 1
             progress_info["percent_complete"] = (progress_info["sent_count"] / progress_info["total_count"]) * 100
             progress_info["statuses"].append({"recipient": recipient, "status": "Sent"})
-        socketio.emit('progress_update', {
-            "percent_complete": progress_info["percent_complete"],
-            "statuses": progress_info["statuses"],
-            "total_count": progress_info["total_count"],
-            "sent_count": progress_info["sent_count"]
-        })
+        # socketio.emit('progress_update', {
+        #     "percent_complete": progress_info["percent_complete"],
+        #     "statuses": progress_info["statuses"],
+        #     "total_count": progress_info["total_count"],
+        #     "sent_count": progress_info["sent_count"]
+        # })
     except Exception as error:
         if retry_count < 5:
             time.sleep(2 ** retry_count)
@@ -120,12 +123,12 @@ def send_email_with_credential(credentials_filename, recipient, subject, body_ht
                 error_file.write(f"Failed to send email to {recipient} using {credentials_filename}. Error: {error}\n")
             with progress_info_lock:
                 progress_info["statuses"].append({"recipient": recipient, "status": f"Failed after {retry_count} retries"})
-            socketio.emit('progress_update', {
-                "percent_complete": progress_info["percent_complete"],
-                "statuses": progress_info["statuses"],
-                "total_count": progress_info["total_count"],
-                "sent_count": progress_info["sent_count"]
-            })
+            # socketio.emit('progress_update', {
+            #     "percent_complete": progress_info["percent_complete"],
+            #     "statuses": progress_info["statuses"],
+            #     "total_count": progress_info["total_count"],
+            #     "sent_count": progress_info["sent_count"]
+            # })
 
 def rotate_credentials_and_send_emails(credentials_folder, recipients_info):
     """Rotate through available credentials and send emails."""
@@ -212,5 +215,12 @@ def send_emails():
     ThreadPoolExecutor().submit(rotate_credentials_and_send_emails, CREDENTIALS_FOLDER, recipients_info)
     return jsonify({"message": "Email sending started"}), 200
 
+@app.route('/progress', methods=['GET'])
+def progress():
+    with progress_info_lock:
+        return jsonify(progress_info)
+
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    # socketio.run(app, debug=True)
+    app.run(debug=True)
+

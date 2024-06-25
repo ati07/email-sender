@@ -107,6 +107,22 @@
             #sent div {
                 margin: 0 5px;
             }
+
+            .loader {
+                border: 4px solid #f3f3f3;
+                border-radius: 50%;
+                border-top: 4px solid #4caf50;
+                width: 30px;
+                height: 30px;
+                animation: spin 1s linear infinite;
+                display: none;
+                margin: 10px auto;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
         </style>
         <script src="https://cdn.socket.io/4.3.1/socket.io.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -123,6 +139,8 @@
         <button class="button" id="uploadContentButton" disabled>Upload Content</button>
 
         <button class="button" id="sendButton" disabled>Send Emails</button>
+
+        <div class="loader" id="loader"></div>
 
         <div id="sent">
             <div id="sentCount">0</div>
@@ -147,6 +165,7 @@
         const statusList = document.getElementById('statusList');
         const sentCount = document.getElementById('sentCount');
         const totalCount = document.getElementById('sentTotal');
+        const loader = document.getElementById('loader');
 
         const socket = io();
         let emailFileUploaded = false;
@@ -165,6 +184,7 @@
             const file = emailFileInput.files[0];
             const formData = new FormData();
             formData.append('file', file);
+            loader.style.display = 'block'; // Show loader
             axios.post('/upload_emails', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -173,11 +193,11 @@
             .then(response => {
                 console.log(response.data.message);
                 emailListFilename = file.name;
-                // sendButton.disabled = false;
                 emailFileUploaded = true;
                 checkFilesUploaded();
             })
-            .catch(error => console.error('Error uploading email list:', error));
+            .catch(error => console.error('Error uploading email list:', error))
+            .finally(() => loader.style.display = 'none'); // Hide loader
         });
 
         uploadContentButton.addEventListener('click', () => {
@@ -186,6 +206,7 @@
             for (let i = 0; i < files.length; i++) {
                 formData.append('files', files[i]);
             }
+            loader.style.display = 'block'; // Show loader
             axios.post('/upload_content', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -195,25 +216,29 @@
                 console.log(response.data.message);
                 contentFilesUploaded = true;
                 checkFilesUploaded();
-                
             })
-            .catch(error => console.error('Error uploading content:', error));
+            .catch(error => console.error('Error uploading content:', error))
+            .finally(() => loader.style.display = 'none'); // Hide loader
         });
 
         sendButton.addEventListener('click', () => {
+            loader.style.display = 'block'; // Show loader
             axios.post('/send_emails', { emailListFilename: emailListFilename })
                 .then(response => {
                     console.log(response.data.message);
                     sendButton.disabled = true;
                     checkProgress();
                 })
-                .catch(error => console.error('Error sending emails:', error));
+                .catch(error => console.error('Error sending emails:', error))
+                .finally(() => loader.style.display = 'none'); // Hide loader
         });
+
         function checkFilesUploaded() {
             if (emailFileUploaded && contentFilesUploaded) {
                 sendButton.disabled = false;
             }
         }
+
         function checkProgress() {
             socket.on('progress_update', data => {
                 progressBarFill.style.width = data.percent_complete + '%';
