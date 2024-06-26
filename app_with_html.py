@@ -41,7 +41,6 @@ progress_info = {
     "percent_complete": 0,
     "statuses": []
 }
-
 progress_info_lock = Lock()  # Lock object for thread safety
 
 def authenticate_gmail(credentials_filename):
@@ -66,18 +65,18 @@ def authenticate_gmail(credentials_filename):
             token.write(creds.to_json())
     return build('gmail', 'v1', credentials=creds)
 
-def create_message(to, subject, plain_text):
+def create_message(to, subject, body_text, body_html):
     """Create a message for an email."""
     message = MIMEMultipart('alternative')
     message['to'] = to
     message['subject'] = subject
     
     # Attach both plain text and HTML versions of the message
-    part1 = MIMEText(plain_text, 'plain')
-    # part2 = MIMEText(body_html, 'html')
+    part1 = MIMEText(body_text, 'plain')
+    part2 = MIMEText(body_html, 'html')
     
     message.attach(part1)
-    # message.attach(part2)
+    message.attach(part2)
     
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
     return {'raw': raw}
@@ -95,11 +94,11 @@ def is_valid_email(email):
     email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
     return re.match(email_regex, email) is not None
 
-def send_email_with_credential(credentials_filename, recipient, subject, plain_text, email_count, retry_count=0):
+def send_email_with_credential(credentials_filename, recipient, subject, body_html, email_count, retry_count=0):
     """Send an email using a specific credential and update progress info."""
     service = authenticate_gmail(credentials_filename)
     body_text = "This is a test email."  # Plain text body for fallback
-    message = create_message(recipient, subject, plain_text)
+    message = create_message(recipient, subject, body_text, body_html)
     try:
         send_email(service, 'me', message)
         with open('success.txt', 'a') as success_file:
@@ -108,9 +107,7 @@ def send_email_with_credential(credentials_filename, recipient, subject, plain_t
             progress_info["sent_count"] += 1
             email_count[credentials_filename] += 1
             progress_info["percent_complete"] = (progress_info["sent_count"] / progress_info["total_count"]) * 100
-            # progress_info["statuses"].append({"recipient": recipient, "status": "Sent"})
-            progress_info["statuses"] = [{"recipient": recipient, "status": "Sent"}]
-            
+            progress_info["statuses"].append({"recipient": recipient, "status": "Sent"})
         # socketio.emit('progress_update', {
         #     "percent_complete": progress_info["percent_complete"],
         #     "statuses": progress_info["statuses"],
@@ -120,14 +117,12 @@ def send_email_with_credential(credentials_filename, recipient, subject, plain_t
     except Exception as error:
         if retry_count < 5:
             time.sleep(2 ** retry_count)
-            send_email_with_credential(credentials_filename, recipient, subject, plain_text, email_count, retry_count + 1)
+            send_email_with_credential(credentials_filename, recipient, subject, body_html, email_count, retry_count + 1)
         else:
             with open('error.txt', 'a') as error_file:
                 error_file.write(f"Failed to send email to {recipient} using {credentials_filename}. Error: {error}\n")
             with progress_info_lock:
-                # progress_info["statuses"].append({"recipient": recipient, "status": f"Failed after {retry_count} retries"})
-                
-                progress_info["statuses"] = [{"recipient": recipient, "status": f"Failed after {retry_count} retries"}]
+                progress_info["statuses"].append({"recipient": recipient, "status": f"Failed after {retry_count} retries"})
             # socketio.emit('progress_update', {
             #     "percent_complete": progress_info["percent_complete"],
             #     "statuses": progress_info["statuses"],
@@ -150,10 +145,10 @@ def rotate_credentials_and_send_emails(credentials_folder, recipients_info):
     with ThreadPoolExecutor(max_workers=len(credentials_files)) as executor:
         futures = []
         for i, recipient_info in enumerate(recipients_info):
-            recipient, subject, plain_text = recipient_info
+            recipient, subject, body_html = recipient_info
             credentials_filename = credentials_files[i % len(credentials_files)]
             if email_count[credentials_filename] < DAILY_LIMIT:
-                futures.append(executor.submit(send_email_with_credential, credentials_filename, recipient, subject, plain_text, email_count))
+                futures.append(executor.submit(send_email_with_credential, credentials_filename, recipient, subject, body_html, email_count))
         
         for future in as_completed(futures):
             try:
@@ -207,14 +202,14 @@ def send_emails():
 
     recipients_info = []
     for line in recipients_data:
-        email, subject, plain_text = line.strip().split(',')
+        email, subject, html_filename = line.strip().split(',')
         if is_valid_email(email):
             try:
-                # with open(os.path.join(UPLOAD_CONTENT_FOLDER, plain_text), 'r') as html_file:
-                #     html_content = html_file.read()
-                recipients_info.append((email, subject, plain_text))
+                with open(os.path.join(UPLOAD_CONTENT_FOLDER, html_filename), 'r') as html_file:
+                    html_content = html_file.read()
+                recipients_info.append((email, subject, html_content))
             except FileNotFoundError:
-                return jsonify({"error": f"HTML content file {plain_text} not found"}), 400
+                return jsonify({"error": f"HTML content file {html_filename} not found"}), 400
     
     # Start sending emails in the background
     ThreadPoolExecutor().submit(rotate_credentials_and_send_emails, CREDENTIALS_FOLDER, recipients_info)
